@@ -197,6 +197,7 @@ volatile int encoder_steps = 0;
 void encoder_callback(uint gpio, uint32_t events) {
     static int last_state = -1;
     static int transition_count = 0;
+    static uint64_t last_step_us = 0;
     static const int8_t transition_table[16] = {
          0, -1,  1,  0,
          1,  0,  0, -1,
@@ -211,20 +212,24 @@ void encoder_callback(uint gpio, uint32_t events) {
     }
 
     int movement = transition_table[(last_state << 2) | state_now];
-    if (movement != 0) {
-        transition_count += movement;
-        if (transition_count >= 4) {
-            encoder_steps++;
-            transition_count = 0;
-            encoder_changed = true;
-        } else if (transition_count <= -4) {
-            encoder_steps--;
-            transition_count = 0;
+    last_state = state_now;
+    if (movement == 0) return;
+
+    transition_count += movement;
+
+    if (transition_count >= 4 || transition_count <= -4) {
+        uint64_t now_us = to_us_since_boot(get_absolute_time());
+        int step = transition_count > 0 ? 1 : -1;
+        transition_count = 0;
+
+        if (now_us - last_step_us < 20000) return;
+        last_step_us = now_us;
+
+        if (!encoder_changed) {
+            encoder_steps = step;
             encoder_changed = true;
         }
     }
-
-    last_state = state_now;
 }
 
 bool button_debounced(void) {
@@ -252,10 +257,10 @@ bool button_debounced(void) {
 //   LPF CONTROL
 // ============================================================
 // Filter | S2 (GP2) | S1 (GP3) | S0 (GP4)
-// LPF 1  (0-2 MHz)   | 5V (1) | GND (0) | GND (0)
+// LPF 1  (0-2 MHz)   | GND (0)| GND (0)| 3V3 (1)
 // LPF 2  (2-4 MHz)   | GND (0)| 5V (1) | 5V (1)
 // LPF 3  (4-8 MHz)   | GND (0)| 5V (1) | GND (0)
-// LPF 4  (8-16 MHz)  | GND (0)| GND (0)| 5V (1)
+// LPF 4  (8-16 MHz)  | 3V3 (1)| GND (0)| GND (0)
 // LPF 5  (16-30 MHz) | GND (0)| GND (0)| GND (0)
 
 typedef struct {
@@ -266,10 +271,10 @@ typedef struct {
 } lpf_band_t;
 
 lpf_band_t bands[] = {
-    {"   0 to 2 MHZ",    1, 0, 0},
+    {"   0 to 2 MHZ",    0, 0, 1},
     {"   2 to 4 MHZ",    0, 1, 1},
     {"   4 to 8 MHZ",    0, 1, 0},
-    {"   8 to 16 MHZ",   0, 0, 1},
+    {"   8 to 16 MHZ",   1, 0, 0},
     {"  16 to 30 MHZ",  0, 0, 0}
 };
 
@@ -398,6 +403,8 @@ int main() {
                 case STATE_IDLE:
                     state = STATE_SELECTING;
                     selected_band = 0;
+                    encoder_steps = 0;
+                    encoder_changed = false;
                     redraw = true;
                     break;
 
@@ -405,15 +412,24 @@ int main() {
                     // Confirm selection – set the LPF
                     set_lpf_band(selected_band);
                     state = STATE_CONFIRMED;
+                    encoder_steps = 0;
+                    encoder_changed = false;
                     redraw = true;
                     break;
 
                 case STATE_CONFIRMED:
                     state = STATE_SELECTING;
                     encoder_value = selected_band;
+                    encoder_steps = 0;
+                    encoder_changed = false;
                     redraw = true;
                     break;
             }
+        }
+
+        if (state != STATE_SELECTING && encoder_changed) {
+            encoder_steps = 0;
+            encoder_changed = false;
         }
 
         // ---- Handle encoder rotation ----
@@ -425,9 +441,9 @@ int main() {
                 encoder_steps = 0;
                 selected_band += steps;
 
-                // Clamp to valid range
-                if (selected_band < 0) selected_band = 0;
-                if (selected_band >= NUM_BANDS) selected_band = NUM_BANDS - 1;
+                // Wrap around at the ends of the menu
+                if (selected_band < 0) selected_band = NUM_BANDS - 1;
+                if (selected_band >= NUM_BANDS) selected_band = 0;
                 encoder_value = selected_band;
                 redraw = true;
             }
