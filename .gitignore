@@ -1,2 +1,11 @@
-build
-!.vscode/*
+build/
+build-ninja/
+.vscode/
+
+*.uf2
+*.elf
+*.bin
+*.hex
+*.map
+*.dis
+*.obj
