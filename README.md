@@ -74,47 +74,6 @@ The menu has three states:
 - `STATE_SELECTING`: lets the encoder move through the LPF bands.
 - `STATE_CONFIRMED`: shows the selected band after applying the GPIO outputs.
 
-## Build Requirements
-
-- Raspberry Pi Pico SDK.
-- CMake 3.13 or newer.
-- Arm GNU toolchain supported by the Pico SDK.
-- A configured Pico development environment, such as the Raspberry Pi Pico
-  VS Code extension.
-
-The Raspberry Pi Pico VS Code tooling block in `CMakeLists.txt` is configured
-for Pico SDK `2.1.0` and picotool `2.1.0`, with Arm GNU toolchain
-`13_3_Rel1`.
-
-## Building
-
-From the project root:
-
-```powershell
-cmake -S . -B build
-cmake --build build
-```
-
-If you prefer Ninja:
-
-```powershell
-cmake -S . -B build-ninja -G Ninja
-cmake --build build-ninja
-```
-
-The build produces the usual Pico output files, including:
-
-- `lpf_controller.uf2`
-- `lpf_controller.elf`
-- `lpf_controller.bin`
-
-## Flashing
-
-1. Hold the Pico `BOOTSEL` button while connecting it to the computer over USB.
-2. Wait for the Pico to appear as a USB mass storage device.
-3. Copy `lpf_controller.uf2` from the build output directory to the Pico.
-4. The Pico will reboot and run the firmware.
-
 ## Project Files
 
 | File | Purpose |
