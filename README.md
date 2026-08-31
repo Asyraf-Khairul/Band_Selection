@@ -82,7 +82,9 @@ The menu has three states:
 - A configured Pico development environment, such as the Raspberry Pi Pico
   VS Code extension.
 
-This project is configured for Pico SDK `2.3.0` in `CMakeLists.txt`.
+The Raspberry Pi Pico VS Code tooling block in `CMakeLists.txt` is configured
+for Pico SDK `2.1.0` and picotool `2.1.0`, with Arm GNU toolchain
+`13_3_Rel1`.
 
 ## Building
 
