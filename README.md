@@ -42,6 +42,16 @@ The OLED is configured for the common SSD1306 I2C address `0x3C`.
 | LPF 4 | 8 to 16 MHz | 1 | 0 | 0 |
 | LPF 5 | 16 to 30 MHz | 0 | 0 | 0 |
 
+## Configuration Points
+
+Most hardware-specific values are defined near the top of `main.c`:
+
+- `I2C_SDA`, `I2C_SCL`, and `OLED_ADDR` set the OLED connection.
+- `ENC_CLK`, `ENC_DT`, and `ENC_SW` set the rotary encoder pins.
+- `LPF_S2`, `LPF_S1`, and `LPF_S0` set the three filter select outputs.
+- The `bands[]` table defines the display name and GPIO output pattern for
+  each LPF range.
+
 ## Controls
 
 1. On startup, the display shows the idle screen.
@@ -49,6 +59,20 @@ The OLED is configured for the common SSD1306 I2C address `0x3C`.
 3. Rotate the encoder to cycle through the available LPF bands.
 4. Press the encoder button again to confirm the selected band.
 5. Press once more from the confirmation screen to change the selection.
+
+## Firmware Flow
+
+The program starts by blinking the on-board LED, configuring I2C, initializing
+the OLED, setting LPF 1 as the default output, and enabling rotary encoder
+interrupts. The main loop then handles button presses, applies encoder movement
+only while selecting a band, redraws the OLED when the state changes, and keeps
+the LED blinking without blocking input handling.
+
+The menu has three states:
+
+- `STATE_IDLE`: waits for the user to start selecting.
+- `STATE_SELECTING`: lets the encoder move through the LPF bands.
+- `STATE_CONFIRMED`: shows the selected band after applying the GPIO outputs.
 
 ## Build Requirements
 
